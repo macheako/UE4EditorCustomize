@@ -523,7 +523,7 @@ bool FUE4EditorCustomizeModule::_Internal_ImportFont(TArray<uint8>& UThemeData, 
 	//the Asset package may already exist
 	UPackage* AssetPackage = FindPackage(nullptr, *AssetPackageName);
 	if (!AssetPackage)
-		AssetPackage = CreatePackage(*AssetPackageName);
+		AssetPackage = CreatePackage(nullptr, *AssetPackageName);
 	UFont* NewFontAsset = Cast<UFont>(StaticDuplicateObject(tmpFont, AssetPackage,*AssetName));
 	if (!NewFontAsset)
 		return false;
@@ -550,7 +550,7 @@ UFontFace* FUE4EditorCustomizeModule::_Internal_ImportFontFace(TArray<uint8>& UT
 		return false;
 #endif
 	FString AssetName = FPackageName::GetLongPackageAssetName(AssetPackageName);
-	UPackage* AssetPackage = CreatePackage(*AssetPackageName);
+	UPackage* AssetPackage = CreatePackage(nullptr, *AssetPackageName);
 	auto* FontFaceFactory = GetMutableDefault<UFontFileImportFactory>();
 	const uint8* FontDataBegin = UThemeData.GetData() + FontDataBeginIndex;
 	bool PrevAutoState = GIsAutomationTesting;
@@ -665,8 +665,7 @@ void FUE4EditorCustomizeModule::CacheOriginalBrushes()
 		"DetailsView.AdvancedDropdownBorder",
 		"Toolbar.Background",
 		"Docking.Tab.ContentAreaBrush",
-		"ContentBrowser.TopBar.GroupBorder",
-		"MessageLog.ListBorder"
+		"ContentBrowser.TopBar.GroupBorder"
 	};
 	for (const FName& CurName : BrushesName)
 	{
@@ -737,27 +736,16 @@ void FUE4EditorCustomizeModule::StartupModule()
 																					TEXT("UE4EditorCustomize"), FText::FromString("UE4 EditorCustomize"),
 																					FText::FromString("Setting For UE4EditorCustomize"), GetMutableDefault<UEditorCustomizeSetting>());
 	SettingS->OnModified().BindRaw(this, &FUE4EditorCustomizeModule::OnSettingModified);
-	SettingS->OnSaveDefaults().BindLambda([=]()->bool
-		{
-			GetMutableDefault<UEditorCustomizeSetting>()->UpdateGlobalUserConfigFile();
-			return true;
-		});
 	SettingS->OnResetDefaults().BindLambda([=]()->bool
-		{
-			TArray<FString> ConfigNeedToReset;
-			FString ConfigSectionName = GetMutableDefault<UEditorCustomizeSetting>()->GetClass()->GetPathName();
-			ConfigNeedToReset.Add(GetMutableDefault<UEditorCustomizeSetting>()->GetClass()->GetConfigName());
-			ConfigNeedToReset.Add(GetMutableDefault<UEditorCustomizeSetting>()->GetGlobalUserConfigFilename());
-			for (FString ConfigFileName : ConfigNeedToReset)
-			{
-				GConfig->EmptySection(*ConfigSectionName, ConfigFileName);
-				GConfig->Flush(false);
-			}
-			FConfigCacheIni::LoadGlobalIniFile(ConfigNeedToReset[0], *FPaths::GetBaseFilename(ConfigNeedToReset[0]), nullptr, true);
-			GetMutableDefault<UEditorCustomizeSetting>()->ReloadConfig(nullptr, nullptr, UE4::LCPF_PropagateToInstances | UE4::LCPF_PropagateToChildDefaultObjects);
-			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ConfigReset_RestartEditor","Config has been reset.Restart Editor to take effect."));
-			return true;
-		});
+										   {
+											   FString ConfigName = GetMutableDefault<UEditorCustomizeSetting>()->GetClass()->GetConfigName();
+											   GConfig->EmptySection(*GetMutableDefault<UEditorCustomizeSetting>()->GetClass()->GetPathName(), ConfigName);
+											   GConfig->Flush(false);
+											   FConfigCacheIni::LoadGlobalIniFile(ConfigName, *FPaths::GetBaseFilename(ConfigName), nullptr, true);
+											   GetMutableDefault<UEditorCustomizeSetting>()->ReloadConfig(nullptr, nullptr, UE4::LCPF_PropagateToInstances | UE4::LCPF_PropagateToChildDefaultObjects);
+											   FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ConfigReset_RestartEditor","Config has been reset.Restart Editor to take effect."));
+											   return true;
+										   });
 }
 
 void FUE4EditorCustomizeModule::ShutdownModule()
@@ -781,7 +769,6 @@ bool FUE4EditorCustomizeModule::OnSettingModified()
 	(FLinearColor&)FEditorStyle::GetColor("Graph.Panel.GridLineColor") = StyleSettings->Graph_Panel.GridLineColor;
 	(FLinearColor&)FEditorStyle::GetColor("Graph.Panel.GridRuleColor") = StyleSettings->Graph_Panel.GridRuleColor;
 	(FLinearColor&)FEditorStyle::GetColor("Graph.Panel.GridCenterColor") = StyleSettings->Graph_Panel.GridCenterColor;
-	(FEditableTextBoxStyle&)FEditorStyle::GetWidgetStyle<FEditableTextBoxStyle>("Log.TextBox") = StyleSettings->Log_TextBox;
 	ApplyCoreStyle(StyleSettings);
 	ApplyTextStyle(StyleSettings);
 
@@ -812,13 +799,11 @@ void FUE4EditorCustomizeModule::ApplyEditorStyle(UEditorCustomizeSetting* StyleS
 	EditorStyles->Set(TEXT("Toolbar.Background"), &StyleSettings->E_Toolbar_Background);
 	EditorStyles->Set("Docking.Tab.ContentAreaBrush", &StyleSettings->Docking_Tab_ContentAreaBrush);
 	EditorStyles->Set("ContentBrowser.TopBar.GroupBorder", &StyleSettings->ContentBrowser_TopBar_GroupBorder);
-	EditorStyles->Set("MessageLog.ListBorder", &StyleSettings->MessageLog_ListBorder);
 	(FCheckBoxStyle&)FEditorStyle::GetWidgetStyle<FCheckBoxStyle>("PlacementBrowser.Tab") = StyleSettings->PlacementBrowser_Tab;
 	(FCheckBoxStyle&)FEditorStyle::GetWidgetStyle<FCheckBoxStyle>("EditorModesToolbar.ToggleButton") = StyleSettings->EditorModesToolbar_ToggleButton;
 	(FTableRowStyle&)FEditorStyle::GetWidgetStyle<FTableRowStyle>("TableView.DarkRow") = StyleSettings->TableView_DarkRow;
 	(FTableRowStyle&)FEditorStyle::GetWidgetStyle<FTableRowStyle>("UMGEditor.PaletteHeader") = StyleSettings->UMGEditor_Palette.UMGEditor_PaletteHeader;
 	(FTableRowStyle&)FEditorStyle::GetWidgetStyle<FTableRowStyle>("UMGEditor.PaletteItem") = StyleSettings->UMGEditor_Palette.UMGEditor_PaletteItem;
-	(FEditableTextBoxStyle&)FEditorStyle::GetWidgetStyle<FEditableTextBoxStyle>("Log.TextBox") = StyleSettings->Log_TextBox;
 	(FLinearColor&)FEditorStyle::GetColor("Graph.Panel.GridLineColor") = StyleSettings->Graph_Panel.GridLineColor;
 	(FLinearColor&)FEditorStyle::GetColor("Graph.Panel.GridRuleColor") = StyleSettings->Graph_Panel.GridRuleColor;
 	(FLinearColor&)FEditorStyle::GetColor("Graph.Panel.GridCenterColor") = StyleSettings->Graph_Panel.GridCenterColor;
@@ -863,7 +848,6 @@ void FUE4EditorCustomizeModule::ApplyTextStyle(class UEditorCustomizeSetting* St
 	((FSlateStyleSet&)FEditorStyle::Get()).Set("ContentBrowser.SourceTreeRootItemFont", StyleSettings->ContentBrowserFont.SourceTreeRootItemFont);
 	(FTextBlockStyle&)FEditorStyle::GetWidgetStyle<FTextBlockStyle>("ContentBrowser.PathText") = StyleSettings->ContentBrowserFont.PathText;
 	(FTextBlockStyle&)FEditorStyle::GetWidgetStyle<FTextBlockStyle>("ContentBrowser.TopBar.Font") = StyleSettings->ContentBrowserFont.TopBar_Font;
-	(FTextBlockStyle&)FEditorStyle::GetWidgetStyle<FTextBlockStyle>("Log.Normal") = StyleSettings->Log_Normal;
 }
 
 void FUE4EditorCustomizeModule::ApplyCustomStyle(class UEditorCustomizeSetting* StyleSettings)
@@ -1145,8 +1129,6 @@ void FUE4EditorCustomizeModule::ResetEditorStyle()
 	GConfig->RemoveKey(*Sec, TEXT("UMGEditor_Palette"), ConfigName);
 	GConfig->RemoveKey(*Sec, TEXT("Docking_Tab_ContentAreaBrush"), ConfigName);
 	GConfig->RemoveKey(*Sec, TEXT("ContentBrowser_TopBar_GroupBorder"), ConfigName);
-	GConfig->RemoveKey(*Sec, TEXT("MessageLog_ListBorder"), ConfigName);
-	GConfig->RemoveKey(*Sec, TEXT("Log_TextBox"), ConfigName);
 	GConfig->Flush(false);
 }
 
@@ -1182,7 +1164,6 @@ void FUE4EditorCustomizeModule::ResetTextStyle()
 	GConfig->RemoveKey(*Sec, TEXT("DetailsView_CategoryFontStyle"), ConfigName);
 	GConfig->RemoveKey(*Sec, TEXT("SettingsEditor_CatgoryAndSectionFont"), ConfigName);
 	GConfig->RemoveKey(*Sec, TEXT("ContentBrowserFont"), ConfigName);
-	GConfig->RemoveKey(*Sec, TEXT("Log_Normal"), ConfigName);
 	GConfig->Flush(false);
 }
 

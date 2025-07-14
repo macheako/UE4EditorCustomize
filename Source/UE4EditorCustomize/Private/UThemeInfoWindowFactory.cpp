@@ -14,7 +14,7 @@
 #include "DesktopPlatformModule.h"
 #include "Widgets/Layout/SConstraintCanvas.h"
 #include "EditorStyleSet.h"
-#include "Misc/FileHelper.h"
+#include <FileHelper.h>
 
 #define LOCTEXT_NAMESPACE "FUE4EditorCustomizeModule"
 

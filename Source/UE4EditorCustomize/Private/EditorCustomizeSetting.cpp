@@ -24,18 +24,18 @@ void UEditorCustomizeSetting::PostProcessCustomStyle(UScriptStruct* StyleStruct,
 	//such as FSlateColor
 	//SlateColor with linked flag will cause some bug while save and load.
 	//It will crash the editor.
-	for (FProperty* CurProperty = StyleStruct->PropertyLink;CurProperty;CurProperty=CurProperty->PropertyLinkNext)
+	for (UProperty* CurProperty = StyleStruct->PropertyLink;CurProperty;CurProperty=CurProperty->PropertyLinkNext)
 	{
 		//Check if it's a FSlateColor
 		FName CppType = *CurProperty->GetCPPType();
 		if (CppType =="FSlateColor")
 		{
 			//Unlink this color.
-			auto* pColor = CastField<FStructProperty>(CurProperty)->ContainerPtrToValuePtr<FSlateColor>(StructPtr);
+			auto* pColor = Cast<UStructProperty>(CurProperty)->ContainerPtrToValuePtr<FSlateColor>(StructPtr);
 			if (pColor)
 				pColor->Unlink();
 		}
-		else if (auto* StructProperty=CastField<FStructProperty>(CurProperty))
+		else if (auto* StructProperty=Cast<UStructProperty>(CurProperty))
 		{
 			PostProcessCustomStyle(StructProperty->Struct, StructProperty->ContainerPtrToValuePtr<void>(StructPtr));
 		}
@@ -69,8 +69,6 @@ void UEditorCustomizeSetting::InitEditorStyle()
 	UMGEditor_Palette.UMGEditor_PaletteItem = FEditorStyle::GetWidgetStyle<FTableRowStyle>("UMGEditor.PaletteItem");
 	Docking_Tab_ContentAreaBrush = *FEditorStyle::GetBrush("Docking.Tab.ContentAreaBrush");
 	ContentBrowser_TopBar_GroupBorder = *FEditorStyle::GetBrush("ContentBrowser.TopBar.GroupBorder");
-	MessageLog_ListBorder = *FEditorStyle::GetBrush("MessageLog.ListBorder");
-	Log_TextBox = FEditorStyle::GetWidgetStyle<FEditableTextBoxStyle>("Log.TextBox");
 }
 
 void UEditorCustomizeSetting::InitCoreStyle()
@@ -109,7 +107,6 @@ void UEditorCustomizeSetting::InitTextStyle()
 	ContentBrowserFont.SourceTreeRootItemFont = FEditorStyle::GetFontStyle("ContentBrowser.AssetTileViewNameFont");
 	ContentBrowserFont.PathText = FEditorStyle::GetWidgetStyle<FTextBlockStyle>("ContentBrowser.PathText");
 	ContentBrowserFont.TopBar_Font = FEditorStyle::GetWidgetStyle<FTextBlockStyle>("ContentBrowser.TopBar.Font");
-	Log_Normal = FEditorStyle::GetWidgetStyle<FTextBlockStyle>("Log.Normal");
 }
 
 void UEditorCustomizeSetting::InitCustomStyle(FSlateStyleSet* SlateStyleSet, FUE4ECCustomStyle& CustomStyle)
